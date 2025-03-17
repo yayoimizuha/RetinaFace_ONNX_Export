@@ -1,16 +1,20 @@
-# これはサンプルの Python スクリプトです。
+from retinaface.pre_trained_models import get_model
+from torchinfo import summary
+from torchao import quantization
+from torch import manual_seed, rand,compile
 
-# Shift+F10 を押して実行するか、ご自身のコードに置き換えてください。
-# Shift を2回押す を押すと、クラス/ファイル/ツールウィンドウ/アクション/設定を検索します。
+model = get_model("resnet50_2020-07-20", max_size=640)
 
+manual_seed(42)
 
-def print_hi(name):
-    # スクリプトをデバッグするには以下のコード行でブレークポイントを使用してください。
-    print(f'Hi, {name}')  # Ctrl+F8を押すとブレークポイントを切り替えます。
+dummy_input = rand(size=(1, 3, 640, 640))
 
+print(model.model)
+summary(model=model.model, input_data=dummy_input)
 
-# ガター内の緑色のボタンを押すとスクリプトを実行します。
-if __name__ == '__main__':
-    print_hi('PyCharm')
+resp_orig = model.model(dummy_input)
 
-# PyCharm のヘルプは https://www.jetbrains.com/help/pycharm/ を参照してください
+qmodel = quantization.autoquant(compile(model.model,mode="max-autotune"),qtensor_class_list=quantization.DEFAULT_AUTOQUANT_CLASS_LIST)
+
+resp_q = qmodel(dummy_input)
+
