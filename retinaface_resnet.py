@@ -1,20 +1,29 @@
 from retinaface.pre_trained_models import get_model
 from torchinfo import summary
-from torchao import quantization
-from torch import manual_seed, rand,compile
+from torchao import quantize_, quantization
+from torch import manual_seed, rand, compile, inference_mode
+from os import environ, pathsep
 
-model = get_model("resnet50_2020-07-20", max_size=640)
+environ["VSLANG"] = "1033"
+environ["LIB"] += pathsep + r"C:\Users\tomokazu\AppData\Local\Programs\Python\Python312\libs"
 
-manual_seed(42)
+with (inference_mode()):
+    model = get_model("resnet50_2020-07-20", max_size=640)
+    model.eval()
 
-dummy_input = rand(size=(1, 3, 640, 640))
+    manual_seed(42)
 
-print(model.model)
-summary(model=model.model, input_data=dummy_input)
+    dummy_input = rand(size=(1, 3, 640, 640))
 
-resp_orig = model.model(dummy_input)
+    # print(model.model)
+    summary(model=model.model, input_data=dummy_input)
 
-qmodel = quantization.autoquant(compile(model.model,mode="max-autotune"),qtensor_class_list=quantization.DEFAULT_AUTOQUANT_CLASS_LIST)
+    resp_orig = model.model(dummy_input)
 
-resp_q = qmodel(dummy_input)
+    qmodel = model.model
 
+    quantization.quant_api.quantize_(qmodel, quantization.quant_api.Int4WeightOnlyConfig())
+
+    resp_q = qmodel(dummy_input)
+    summary(model=qmodel, input_data=dummy_input)
+    print([r.shape for r in resp_orig])
